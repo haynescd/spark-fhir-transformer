@@ -1,0 +1,13 @@
+antlr4-python3-runtime==4.13.2
+click==8.1.7
+fhirpathpy==2.1.0
+numpy==2.4.2
+pandas==2.2.3
+py4j==0.10.9.9
+pyspark==4.1.1
+python-dateutil==2.9.0.post0
+pytz==2025.2
+radiant_fhir_transform_cli @ git+https://github.com/radiant-network/radiant-fhir-transformers@379f50a14001c20d01ce39f5664739cc1bd5270e
+six==1.17.0
+sqlonfhir==0.0.2
+tzdata==2025.3

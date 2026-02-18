@@ -1,7 +1,7 @@
 
 services:
   spark-master:
-    image: apache/spark:4.0.1
+    image: apache/spark:4.1.1
     container_name: spark-master
     command: >
       /opt/spark/bin/spark-class
@@ -12,7 +12,7 @@ services:
     volumes:
       - ./data:/opt/spark/data
   spark-worker:
-    image: apache/spark:4.0.1
+    image: apache/spark:4.1.1
     container_name: spark-worker
     command: >
       /opt/spark/bin/spark-class
@@ -23,7 +23,7 @@ services:
     depends_on:
       - spark-master
   spark-submit:
-    image: apache/spark:4.0.1
+    build: .
     container_name: spark-submit
     depends_on:
       - spark-master
