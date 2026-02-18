@@ -12,7 +12,7 @@ services:
     volumes:
       - ./data:/opt/spark/data
   spark-worker:
-    image: apache/spark:4.1.1
+    build: .
     container_name: spark-worker
     command: >
       /opt/spark/bin/spark-class
@@ -22,9 +22,24 @@ services:
       - ./data:/opt/spark/data
     depends_on:
       - spark-master
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console UI
+    volumes:
+      - ./data/output:/data
   spark-submit:
     build: .
     container_name: spark-submit
+    environment:
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=minio123
     depends_on:
       - spark-master
     volumes:
@@ -33,5 +48,6 @@ services:
     command: >
       /opt/spark/bin/spark-submit
       --master spark://spark-master:7077
+      --packages org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.517
       hello_spark.py
 

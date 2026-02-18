@@ -1,5 +1,7 @@
 import glob
+import os
 import re
+import shutil
 from collections.abc import Iterator
 
 import pandas as pd
@@ -62,29 +64,57 @@ def generate_table_name(resource_type: str, resource_subtype: str | None) -> str
 
 
 def transform_resources(transformer: FhirResourceTransformer):
-    def transform(itr: Iterator[pd.DataFrame]):
-        for resource in itr:
-            pass
+    def transform(df_iter):
+        for df in df_iter:
+            # Convert DataFrame to list of dictionaries (resources)
+            resources = df.to_dict("records")
 
-        pass
+            # Transform resources using the FHIR transformer
+            transformed_resources = transformer.transform_resources(resources)
+
+            # Convert back to DataFrame for Spark
+            if transformed_resources:
+                yield pd.DataFrame(transformed_resources)
+            else:
+                # Return empty DataFrame with proper schema if no resources
+                yield pd.DataFrame()
+
+    return transform
 
 
-def generate_schema(transformer: FhirResourceTransformer) -> DataType:
-    return DataType.fromDDL(" ".join([f"{c.name} string," for c in transformer.column_metadata()]))
+def generate_schema(transformer: FhirResourceTransformer) -> StructType:
+    fields = [StructField(c.name, StringType(), True) for c in transformer.column_metadata()]
+    return StructType(fields)
 
 
 def main():
     RESOURCE_TYPE = "Patient"
 
+    output_loc = f"s3a://spark-data/output/{RESOURCE_TYPE}"
+
     fhir_transformers = transformers[RESOURCE_TYPE]
     # 1. Initialize the session and connect to your Docker Master
-    spark = SparkSession.builder.appName("MyFirstClusterJob").getOrCreate()
+    spark = (
+        SparkSession.builder.appName("MyFirstClusterJob")
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000")
+        .config("spark.hadoop.fs.s3a.access.key", "minio")
+        .config("spark.hadoop.fs.s3a.secret.key", "minio123")
+        .config("spark.hadoop.fs.s3a.path.style.access", "true")
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        # Fix for the "60s" NumberFormatException:
+        .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.socket.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.connection.establish.timeout", "60000")
+        .getOrCreate()
+    )
     spark.sparkContext.setLogLevel("WARN")
 
-    files = glob.glob(f"/opt/spark/data/{RESOURCE_TYPE}/*.ndjson")
+    files = glob.glob(f"/opt/spark/data/input/{RESOURCE_TYPE}/*.ndjson")
 
     # Read Data
     df = spark.read.option("multiLine", "false").json(files)
+
+    _ = df.cache()
 
     # Transform Resource [list[dict]] using Fhir Transformer
     subtype_dfs = {}
@@ -95,6 +125,18 @@ def main():
 
         subtype_dfs[table_name] = df.mapInPandas(transform_resources(t), schema=schema)
 
+        # for table_name, subtype_df in subtype_dfs.items():
+        # output_path = f"{output_loc}/{table_name}"
+        # try:
+        #    subtype_df.write.mode("overwrite").option("header", "true").option("escape", '"').csv(
+        #        output_path
+        #    )
+        # except Exception as e:
+        #    print(f"Error writing {table_name}: {e}")
+        #    subtype_df.show()
+
+    d = subtype_dfs["patient"]
+    d.show(5, truncate=False)
     print(f"Patients loaded {df.count()}")
 
     # 4. Show the result

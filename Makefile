@@ -1,6 +1,6 @@
 # Makefile
 
-SPARK_JOBS := spark-master spark-worker
+SPARK_JOBS := spark-master spark-worker minio
 SPARK_SUBMIT := spark-submit
 
 .PHONY: help up down restart logs ps clean
@@ -37,4 +37,5 @@ clean:
 	docker-compose down -v
 
 run:
+	docker-compose build $(SPARK_SUBMIT)
 	docker-compose run --rm $(SPARK_SUBMIT)
