@@ -8,7 +8,7 @@ pyarrow==23.0.1
 pyspark==4.1.1
 python-dateutil==2.9.0.post0
 pytz==2025.2
-radiant-fhir-transform-cli @ git+https://github.com/radiant-network/radiant-fhir-transformers@379f50a14001c20d01ce39f5664739cc1bd5270e
+radiant-fhir-transform-cli @ git+https://github.com/radiant-network/radiant-fhir-transformers@1.8.0
 six==1.17.0
 sqlonfhir==0.0.2
 tzdata==2025.3

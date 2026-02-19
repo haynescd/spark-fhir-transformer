@@ -1,6 +1,6 @@
 # Makefile
 
-SPARK_JOBS := spark-master spark-worker minio
+SPARK_JOBS := spark-master spark-worker spark-worker-2 minio
 SPARK_SUBMIT := spark-submit
 
 .PHONY: help up down restart logs ps clean

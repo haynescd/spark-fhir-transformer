@@ -11,9 +11,28 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/opt/spark/data
+    networks:
+      - spark-network
+
   spark-worker:
     build: .
     container_name: spark-worker
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data:/opt/spark/data
+    depends_on:
+      - spark-master
+    networks:
+      - spark-network
+
+  spark-worker-2:
+    build: .
+    container_name: spark-worker-2
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.worker.Worker
@@ -22,6 +41,8 @@ services:
       - ./data:/opt/spark/data
     depends_on:
       - spark-master
+    networks:
+      - spark-network
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -34,12 +55,11 @@ services:
       - "9001:9001"   # Console UI
     volumes:
       - ./data/output:/data
+    networks:
+      - spark-network
   spark-submit:
     build: .
     container_name: spark-submit
-    environment:
-      - AWS_ACCESS_KEY_ID=minio
-      - AWS_SECRET_ACCESS_KEY=minio123
     depends_on:
       - spark-master
     volumes:
@@ -48,6 +68,11 @@ services:
     command: >
       /opt/spark/bin/spark-submit
       --master spark://spark-master:7077
-      --packages org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.517
+      --packages org.apache.hadoop:hadoop-aws:3.4.2,software.amazon.awssdk:bundle:2.25.26
       hello_spark.py
+    networks:
+      - spark-network
 
+networks:
+  spark-network:
+    driver: bridge
